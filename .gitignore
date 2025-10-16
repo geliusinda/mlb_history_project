@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.env
+db/*.db
+data/raw/*.csv
+data/clean/*.csv
+.streamlit/
