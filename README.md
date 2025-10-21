@@ -161,3 +161,6 @@ mlb_history_project/
 **Author:** Anhelina Khmelnytska  
 **Program:** Code the Dream – Lesson 14 (Web Scraping & Dashboard Project)  
 **License:** MIT License for code; data © Baseball Almanac and respective owners
+
+
+## Dashboard Preview

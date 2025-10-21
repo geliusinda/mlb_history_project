@@ -16,7 +16,6 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
 from config import (
     START_YEAR, END_YEAR, LEAGUE_URLS,
@@ -29,6 +28,7 @@ RAW_DIR.mkdir(parents=True, exist_ok=True)
 
 def init_driver(headless: bool = True):
     opts = Options()
+    opts.page_load_strategy = "eager"
     if headless:
         opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
@@ -36,17 +36,28 @@ def init_driver(headless: bool = True):
     opts.add_argument("--disable-gpu")
     opts.add_argument("--window-size=1920,1080")
     opts.add_argument(f"--user-agent={USER_AGENT}")
-    service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=opts)
+    try:
+        opts.add_experimental_option(
+            "prefs",
+            {"profile.managed_default_content_settings.images": 2}
+        )
+    except Exception:
+        pass
+
+    service = Service() 
+    driver = webdriver.Chrome(service=service, options=opts)
+    return driver
+
 
 def _norm(s: str) -> str:
     s = str(s).strip().lower()
     s = re.sub(r"\s+", "_", s)
-    s = s.replace("%", "%")
     return s
+
 
 def _normalize_cols(cols):
     return [_norm(c) for c in cols]
+
 
 def _pick_standings_table(html: str):
     soup = BeautifulSoup(html, "lxml")
@@ -61,13 +72,18 @@ def _pick_standings_table(html: str):
     for t in soup.find_all("table"):
         txt = t.get_text(" ", strip=True).lower()
         score = 0
-        if "standings" in txt: score += 2
-        if " wins " in txt or " w " in txt: score += 2
-        if " losses " in txt or " l " in txt: score += 2
-        if " pct" in txt or " w-l%" in txt or " win%" in txt or " wp " in txt: score += 1
+        if "standings" in txt:
+            score += 2
+        if " wins " in txt or " w " in txt:
+            score += 2
+        if " losses " in txt or " l " in txt:
+            score += 2
+        if " pct" in txt or " w-l%" in txt or " win%" in txt or " wp " in txt:
+            score += 1
         if score > best_score:
             best, best_score = t, score
     return best
+
 
 def parse_standings_html(html: str, league: str) -> pd.DataFrame:
     target = _pick_standings_table(html)
@@ -77,7 +93,10 @@ def parse_standings_html(html: str, league: str) -> pd.DataFrame:
     df = pd.read_html(StringIO(str(target)))[0]
 
     if isinstance(df.columns, pd.MultiIndex):
-        df.columns = ["_".join([str(x) for x in tup if str(x) != "nan"]).strip().lower() for tup in df.columns]
+        df.columns = [
+            "_".join([str(x) for x in tup if str(x) != "nan"]).strip().lower()
+            for tup in df.columns
+        ]
     else:
         df.columns = _normalize_cols(df.columns)
 
@@ -116,6 +135,7 @@ def parse_standings_html(html: str, league: str) -> pd.DataFrame:
     keep = [c for c in ["team", "wins", "losses", "win_pct", "games_behind", "payroll", "division"] if c in df.columns]
     df = df[keep].copy()
 
+    # типы
     if "wins" not in df.columns:
         df["wins"] = pd.NA
     if "losses" not in df.columns:
@@ -156,6 +176,7 @@ def parse_standings_html(html: str, league: str) -> pd.DataFrame:
     df.insert(0, "league", league)
     return df
 
+
 def scrape_year(driver, year: int):
     frames = []
     for league, url_tmpl in LEAGUE_URLS.items():
@@ -190,7 +211,7 @@ def main():
                 all_frames.append(df)
         if all_frames:
             merged = pd.concat(all_frames, ignore_index=True)
-            (RAW_DIR / "standings_all_raw.csv").write_text(merged.to_csv(index=False), encoding="utf-8")
+            merged.to_csv(RAW_DIR / "standings_all_raw.csv", index=False)
             print(f"[DONE] Wrote merged CSV with {len(merged)} rows")
         else:
             print("[WARN] No data scraped.")

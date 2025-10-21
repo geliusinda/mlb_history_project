@@ -19,7 +19,7 @@ DB_PATH = Path(__file__).resolve().parents[1] / "db" / "baseball_history.db"
 
 st.set_page_config(page_title="MLB History Dashboard", layout="wide")
 
-st.title("⚾ MLB Year-by-Year — Standings Explorer")
+st.title("MLB Year-by-Year — Standings Explorer")
 st.markdown("Data source: **Baseball Almanac — Year in Review** (scraped for educational use).")
 
 if not DB_PATH.exists():

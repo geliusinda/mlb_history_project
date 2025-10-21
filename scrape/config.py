@@ -1,4 +1,4 @@
-START_YEAR = 1990
+START_YEAR = 1980
 END_YEAR = 2025
 DATASETS = ["standings"]
 
