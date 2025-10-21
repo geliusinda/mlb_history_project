@@ -164,3 +164,4 @@ mlb_history_project/
 
 
 ## Dashboard Preview
+![Dashboard Preview](images/dashboard.png)
